@@ -1,0 +1,121 @@
+from tkinter import *
+from tkinter import messagebox
+from wordle import Wordle
+import pandas as pd
+import random
+
+# --- DEFINE PARAMETERS ---
+bg_color = "black"
+current_guess = 0
+end_game = False
+
+
+# --- GAME INTERFACE ---
+root = Tk()
+root.title("Wordle")
+root.config(bg=bg_color)
+root.geometry("450x620")
+
+# Title
+Label(
+    root,
+    text="WORDLE", 
+    font=("Helvetica", 40, "bold"),
+    fg="yellow",
+    bg=bg_color
+).pack(pady=(35, 5))
+
+# Answer box
+fr_ans = Frame(root, pady=5, bg=bg_color)
+fr_ans.pack(anchor='center', expand=True)
+
+lbl = Label(fr_ans, text="Your Answer", width=10, anchor='w',
+            font=("Helvetica", 14, "bold"), bg=bg_color, fg="white")
+lbl.pack(side=LEFT, padx=5)           
+
+entry = Entry(fr_ans)
+entry.pack(side=LEFT, padx=5)
+entry.focus()
+
+# Answer
+body = Frame(root, bg=bg_color)
+body.pack(fill=BOTH, expand=True)
+
+grid = [
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0]
+]
+
+mfield = []
+for row in range (6):
+    blocksContainer = Frame(body, bg=bg_color)
+    blocksContainer.pack()
+    for col in range(5):
+        txt = '' if grid[row][col] == 0 else grid[row][col]
+        mfield.append(Button(blocksContainer, relief="groove", bg=bg_color,highlightbackground="white", highlightcolor="white",
+                     height=1, width=4, font=("Helvetica", 20, "bold")))
+        mfield[row * 5 + col].grid(row=0, column=col, padx=2, pady=5, sticky="ew")
+
+# Correct Answer
+lab_ans = Label(root, bg=bg_color)
+lab_ans.pack(pady=(0, 10))
+
+
+# --- RANDOM WORD ---
+data = pd.read_csv("data/wordle.csv")
+word_list = data['word']
+
+
+# --- CHECK ANSWER ---
+def check_answer(user_ans, row):
+    global wordle
+    guess_label = wordle.check_letter(user_ans)
+
+    for i in range (5):
+        letter = user_ans[i]
+        color = guess_label[i]
+        mfield[row * 5 + i].config(text=letter.upper(), fg="white", bg=color)
+
+    if len(set(guess_label)) == 1 and guess_label[0] == "green":
+        return True
+    return False
+
+def handle_user_answer(event=None):
+    global current_guess, end_game
+
+    if end_game:
+        return
+
+    user_ans = entry.get()
+    if len(user_ans) == 5:
+        if user_ans in set(word_list):
+            if check_answer(user_ans, current_guess):
+                lab_ans.config(text=f"Correct Answer: {correct_ans.upper()}. YOU WIN !!!",
+                                bg=bg_color, fg="yellow", font=("Helvetica", 14, "bold"))
+                entry.config(state="disabled")
+                end_game = True
+            elif current_guess == 5:
+                lab_ans.config(text=f"Correct Answer: {correct_ans.upper()}. YOU LOSE!",
+                                bg=bg_color, fg="yellow", font=("Helvetica", 14, "bold"))
+                entry.config(state="disabled")
+                end_game = True
+            else:
+                current_guess += 1
+                entry.delete(0, 'end')
+        else:
+            messagebox.showwarning("Warning", "It's not in word list")
+    else:
+        messagebox.showwarning("Warning", "It's a 5-letter word")
+    
+
+# --- MAIN ---
+correct_ans = str(random.choice(word_list))
+wordle = Wordle(correct_ans)
+print(correct_ans)
+
+root.bind('<Return>', handle_user_answer)
+root.mainloop()
